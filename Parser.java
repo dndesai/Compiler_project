@@ -1,19 +1,184 @@
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Stack;
 
-// whenever a token is parsed it is removed from arraylist hence when arraylistv gets empty it reports pass
+
+
+
+
+
+
+
+
+
+
+
+
 public class Parser {
-	int i = 0;
-	// counters for variables, functions, statements
-	int varcount = 0; 
-	int funcount = 0;
-	int statecount = 0;
-	public static void main(String[] args) {
+	
+	
+		public StringBuilder ir_code = new StringBuilder();
+		private String nextexpression;
+		private static String newFileName;
+		
+		public String fetchRef() {
+	    	return nextexpression;
+	    }
+		 
+		public String myIr() {
+			String result = ir_code.toString();
+	    	ir_code = new StringBuilder();			
+	    	return result;
+	    }
+		
+		public void code_gen(String s) {
+	    	if (s.length() > 0) {
+	    		
+	    		ir_code.append(s);
+	    		
+	    	}
+	    }
+		
+		public void setAccess(String s) {
+	    	nextexpression = s;
+	    	
+	    }
+		
+		 public boolean checkflag;
+		public boolean globalcheck;
+		public int index;
+		public String type;
+		
+		
+		public String arrayreference(int may) {
+        	if (index != -1) {
+	        	if (globalcheck) {
+	        		return "global[" + Integer.toString(may) + "]";
+	        	}
+	        	return "local[" + Integer.toString(may) + "]";
+        	}
+        	return "nulll";
+        }
+		public String gettype() {
+			return type;
+		}
+		public void settype(String stringtype)
+		{
+			type = stringtype;
+		}
+		public int getIndex() {
+        	return index;
+        }
+		
+		public boolean globalcheck() {
+        	return globalcheck;
+        }
+		
+	
+	
+	
+		ArrayList<String> entryloops = new ArrayList<String>(); ;
+		ArrayList<String> exitloop = new ArrayList<String>();
+		
+	
+		private void labeling(String start, String end) {
+			entryloops.add(start);
+			exitloop.add(end);
+		}
+		
+	private ArrayList<String> globalstorage  = new ArrayList<String>();
+	private ArrayList<String> localstorage = new ArrayList<String>();
+	
+	private int labelnum= 0 ;
+	
+	private boolean localvarisfac;
+	
+	public Parser(String fileName) throws FileNotFoundException, IOException {
+		
+		
+		
+		
+		
+	}
+	
+		
+		
+	
+	
+	private ArrayList<String> intracode = new ArrayList<String>();
+	
+	
+	public int locatePos(String code, boolean isArray) {
+		if (isArray) {
+			
+			code += "[0]"; 
+		}
+		
+		
+		for (int i = 0; i < localstorage.size(); i++) {
+			
+			if (localstorage.get(i).equals(code)) {
+				globalcheck = false;
+				return i;
+			}
+		}
+		
+		for (int i = 0; i < globalstorage.size(); i++) {
+			if (globalstorage.get(i).equals(code)) {
+				globalcheck =true;
+				return i;
+			}
+		}
+		
+		
+		checkflag = false;
+		mystorage(code);	
+		return localstorage.size()-1;
+		
+	}
+	
+	
+		
+	private String mystorage(String s)  {
+		String code = "";
+		
+		if (checkflag) {
+			
+			globalstorage.add(s);
+			
+			 
+			code += " " + "global[" + Integer.toString(globalstorage.size() - 1) + "] = " + s + ";";
+		} else {
+			
+			localstorage.add(s);
+			
+			code += " " + "local[" + Integer.toString(localstorage.size() - 1) + "] = " + s + ";";
+		}
+		
+		return code; 
+	}
+	
+	
+	
+	
+	
+	
+	int j = 0;
+	
+	
+	public static void main(String[] args) throws FileNotFoundException, IOException {
 		if (args.length < 1) {
-			System.err.println("Please provide an input file to process");
+			System.err.println("file not found");
 			System.exit(1);
 		}
 
 		String fileName = args[0];
-		Parser parser = new Parser();
+		newFileName = args[0];
+		Parser parser = new Parser(fileName);
 		Proscanner.proscan(fileName);
 
 		parser.program();
@@ -27,32 +192,61 @@ public class Parser {
 	}
 
 	public void pass() {
-		System.out.println("Pass. ");
-		System.out.print("variables  ");
-		System.out.println(varcount);
-		System.out.print("functions  ");
-		System.out.println(funcount);
 		
-		System.out.print("statements  ");
-		System.out.println(statecount);
+		try{
+			String[] input = newFileName.split("\\.");
+			
+			File file = new File(input[0]+"_gen.c");
+
+			// if file doesnt exists, then create it
+			if (!file.exists()) {
+				file.createNewFile();
+			}
+			
+			FileWriter fw;
+			fw = new FileWriter(file.getAbsolutePath());			
+			BufferedWriter bw = new BufferedWriter(fw);
+			for(int i=0; i<Proscanner.metatokens.size();i++){
+				bw.write(Proscanner.metatokens.get(i).getValue());
+			}
+				
+			for(int i=0; i<intracode.size();i++){
+				bw.write(intracode.get(i));	
+				}
+		    bw.close();
+
+			
+			} catch (IOException e) {
+				
+				e.printStackTrace();
+			}
+		
+		
+		
 	}
 	
 	
 	public boolean program() {
 		
-		if (typename()) {
-			
-			
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.Identifiers) {
-				
+		if (Proscanner.tokens.get(j).getValue().equals("int") 
+				|| Proscanner.tokens.get(j).getValue().equals("void")
+				|| Proscanner.tokens.get(j).getValue().equals("binary")
+				|| Proscanner.tokens.get(j).getValue().equals("decimal"))
+		 {
+			String datatype = Proscanner.tokens.get(j).getValue();
+			settype(datatype);
+			j++;
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
 				
 				
 				return false;
 
 			} 
-			Proscanner.tokens.remove(0);
+			String id = Proscanner.tokens.get(j).getValue();
 			
-			if (!programprime()) {
+			j++;
+			
+			if (!programprime(datatype, id)) {
 				fail();
 				return false;
 			}
@@ -68,18 +262,52 @@ public class Parser {
 		}
 	}
 
-	public boolean programprime() {
+	public boolean programprime(String datatype, String id) {
 		
-		if (Proscanner.tokens.isEmpty()) { //checks if arraylist is empty and all tokens are consumed calls pass
+		if (Proscanner.tokens.get(j).getValue().equals("EOF")) { //checks if last element is arraylist is eof and all tokens are consumed calls pass
 
 			return true;
 		}
 		
-		else if (datadeclsprime()) {
+		else if (datadeclsprime(id, true)) {
 			
-			return true;
-		} else if (funclistprime()) {
-
+			
+				return true;
+				
+		} else if (Proscanner.tokens.get(j).getValue().equals("(")) {
+			if (globalstorage.size() > 0) {
+				
+				intracode.add("int global[" + globalstorage.size() + "];" + " ");
+					
+				
+			}
+			
+			intracode.add(" " + gettype() + " " + id + " ");
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			j++;
+			
+			if (!parameterlist()) {
+				return false;
+			}
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
+				
+				return false;
+			} 
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			j++;
+			
+			
+			
+			if (!funcprime()) {
+				return false;
+			}
+			
+			localstorage.clear();
+			
+			if (!funclist()) {
+				return false;
+			}
 			return true;
 		}
 
@@ -89,45 +317,53 @@ public class Parser {
 		}
 	}
 
-	public boolean datadeclsprime() {
+	public boolean datadeclsprime(String id, boolean globalcheck) {
 		
-		if (Proscanner.tokens.get(i).getValue().equals("[")) {
-			Proscanner.tokens.remove(0);
+		if (idprime(id, globalcheck)) {
 			
-			if (!expression()) {
+			
+			if (!idlistprime(globalcheck)) {
 				return false;
 			}
-			if (!Proscanner.tokens.get(i).getValue().equals("]")) {
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
-			if (!idlistprime()) {
-				return false;
-			}
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
+			j++;
+			
+			
+			
 			if (!datadeclsdoubleprime()) {
 				return false;
 			}
+			
+			
+						
 			return true;
 		
-		} else if (Proscanner.tokens.get(i).getValue().equals(",")) {
-			Proscanner.tokens.remove(0);
-			if (!id()) {
+		} else if (Proscanner.tokens.get(j).getValue().equals(",")) {
+			j++;
+			
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
+				return false;
+				
+				
+		
+				
+			}
+			j++;
+			
+			if (!idprime(id, globalcheck)) {
 				return false;
 			}
-			if (!idlistprime()) {
+			if (!idlistprime(globalcheck)) {
 				return false;
 			}
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
+			j++;
 			if (!datadeclsdoubleprime()) {
 				return false;
 			}
@@ -140,22 +376,24 @@ public class Parser {
 
 	public boolean datadeclsdoubleprime() {
 		
-		if (Proscanner.tokens.isEmpty()) {
+		if (Proscanner.tokens.get(j).getValue().equals("EOF")) {
 
 			return true;
 		}
 		else if (typename()) {
 			
-			
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.Identifiers) {
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
 				
 				
 				return false;
 
 			} 
-			Proscanner.tokens.remove(0);
 			
-			if (!programprime()) {
+			String id = Proscanner.tokens.get(j).getValue();
+			
+			j++;
+			String datatype =gettype();
+			if (!programprime( datatype, id)) {
 
 				return false;
 			}
@@ -168,52 +406,58 @@ public class Parser {
 		}
 	}
 
-	public boolean datafuncdecl() {
-		
-		if (datadeclsprime()) {
-			return true;
-		} else if (funclistprime()) {
-			return true;
-		} else {
-			return false;
-		}
-	}
+	
 
 	public boolean funclist() {
 		
-		if (Proscanner.tokens.isEmpty()) {
+		if (Proscanner.tokens.get(j).getValue().equals("EOF")) {
 			
 			return true;
 		}
-		else if(func()) {
-			if (!funclist()) {
+		else if (typename()) {
+
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
+				
 				return false;
 			}
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-
-	public boolean funclistprime() {
-		
-		if (funcdeclprime()) {
+			
+			intracode.add(" " + gettype() + " " + Proscanner.tokens.get(j).getValue());
+			
+			j++;
+			if (!Proscanner.tokens.get(j).getValue().equals("(")) {
+				return false;
+			}
+				
+			
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+				j++;
+				
+				if (!parameterlist()) {
+					return false;
+				}
+				
+				if (!Proscanner.tokens.get(j).getValue().equals(")")) {
+					
+					return false;
+				} 
+				intracode.add(" " + Proscanner.tokens.get(j).getValue());
+				j++;
 			
 			if (!funcprime()) {
 				return false;
 			}
-			
+			localstorage.clear();
 			if (!funclist()) {
 				return false;
 			}
 			return true;
-		
-		} else {
+		}
+		else {
 			return false;
 		}
-
 	}
+
+
 
 	public boolean func() {
 		
@@ -227,66 +471,114 @@ public class Parser {
 		}
 	}
 
-	public boolean funcprime() {       //counts functions at end of rightbrace
+	public boolean funcprime() {  
 		
-		if (Proscanner.tokens.get(i).getValue().equals(";")) {
-			Proscanner.tokens.remove(0);
+		if (Proscanner.tokens.get(j).getValue().equals(";")) {
+			intracode.add(" " + Proscanner.tokens.get(j).getValue() + " ");
+			j++;
+			localstorage.clear();
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("{")) {
+		} else if (Proscanner.tokens.get(j).getValue().equals("{")) {
+			intracode.add(" " + Proscanner.tokens.get(j).getValue() + " ");
+			j++;
 			
-			Proscanner.tokens.remove(0);
 			
-			if (!datadecls()) {
+			ArrayList<String> insidefunc = new ArrayList<String>();				
+			StringBuilder sb = new StringBuilder();
+			
+			for (int i = 0; i < localstorage.size(); i++) {
+				
+				sb.append("local[" + Integer.toString(i) + "] = " + localstorage.get(i) + ";");
+				
+			}	
+		
+			insidefunc.add(sb.toString());
+			
+			if (!datadecls(false)) {
 				return false;
 			}
-
+			
+			
+			
 			if (!statements()) {
 				return false;
 			}
 			
-			if (!Proscanner.tokens.get(i).getValue().equals("}")) {
+			if (!Proscanner.tokens.get(j).getValue().equals("}")) {
 				
 				return false;
 			}
-			Proscanner.tokens.remove(0);
-			funcount++;
+			
+			if (localstorage.size() > 0) {
+				insidefunc.add(0, "int local[" + Integer.toString(localstorage.size()) + "];");
+			}
+			
+			
+			insidefunc.add(myIr());
+			
+			
+			intracode.addAll(insidefunc);
+			
+			intracode.add(" " + Proscanner.tokens.get(j).getValue() +  " ");
+			
+			j++;
+			
 			return true;
 		
-		} else {
+		}
+		
+		else {
 			return false;
 		}
 	}
 
-	public boolean datadecls() {
+	public boolean datadecls(boolean globalcheck) {
 		
 		
-		if (typename()) {
+		if (Proscanner.tokens.get(j).getValue().equals("int") 
+				|| Proscanner.tokens.get(j).getValue().equals("void")
+				|| Proscanner.tokens.get(j).getValue().equals("binary")
+				|| Proscanner.tokens.get(j).getValue().equals("decimal")) {
+			j++;
 			
-			
-			if (!idlist()) {
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
 				return false;
 			}
 			
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
+			
+			String id = Proscanner.tokens.get(j).getValue();
+			
+			
+			j++;			
+			
+			if (!idprime(id, globalcheck)) {
+				return false;
+			}
+			
+			if (!idlistprime(globalcheck)) {
+				return false;
+			}
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
+			j++;
 			
-			if (!datadecls()) {
+			if (!datadecls(globalcheck)) {
 				return false;
 			}
 			return true;
-		} else if ((Proscanner.tokens.get(i).getKey()) == TokenNames.Identifiers
-				|| Proscanner.tokens.get(i).getValue().equals("if")
-				|| Proscanner.tokens.get(i).getValue().equals("while")
-				|| Proscanner.tokens.get(i).getValue().equals("return")
-				|| Proscanner.tokens.get(i).getValue().equals("continue")
-				|| Proscanner.tokens.get(i).getValue().equals("break")
-				|| Proscanner.tokens.get(i).getValue().equals("read")
-				|| Proscanner.tokens.get(i).getValue().equals("write")
-				|| Proscanner.tokens.get(i).getValue().equals("print")
-				|| Proscanner.tokens.get(i).getValue().equals("}")) {
+		} else if ((Proscanner.tokens.get(j).getKey()) == TokenNames.Identifiers
+				|| Proscanner.tokens.get(j).getValue().equals("if")
+				|| Proscanner.tokens.get(j).getValue().equals("while")
+				|| Proscanner.tokens.get(j).getValue().equals("return")
+				|| Proscanner.tokens.get(j).getValue().equals("continue")
+				|| Proscanner.tokens.get(j).getValue().equals("break")
+				|| Proscanner.tokens.get(j).getValue().equals("read")
+				|| Proscanner.tokens.get(j).getValue().equals("write")
+				|| Proscanner.tokens.get(j).getValue().equals("print")
+				|| Proscanner.tokens.get(j).getValue().equals("}")) {
 			
 			return true;
 		} else {
@@ -298,14 +590,19 @@ public class Parser {
 		
 		if (typename()) {
 
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.Identifiers) {
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
 				
 				return false;
-			} 
-			Proscanner.tokens.remove(0);
+			}
+			
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			
+			j++;
 			if (!funcdeclprime()) {
 				return false;
-			}
+			} 
+			
+			
 			return true;
 		} else {
 			return false;
@@ -314,34 +611,39 @@ public class Parser {
 
 	public boolean funcdeclprime() {
 		
-		if (Proscanner.tokens.get(i).getValue().equals("(")) {
-			
-			Proscanner.tokens.remove(0);
+		
+		localstorage.clear();
+		if (Proscanner.tokens.get(j).getValue().equals("(")) {
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			j++;
 			
 			if (!parameterlist()) {
 				return false;
 			}
 			
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			j++;
 			
 			return true;
 		} else {
 			return false;
 		}
-	}
+	} 
 
 	public boolean typename() {
 		
-		if (Proscanner.tokens.get(i).getValue().equals("int") || Proscanner.tokens.get(i).getValue().equals("void")
-				|| Proscanner.tokens.get(i).getValue().equals("binary")
-				|| Proscanner.tokens.get(i).getValue().equals("decimal")) {
-
+		if (Proscanner.tokens.get(j).getValue().equals("int") 
+				|| Proscanner.tokens.get(j).getValue().equals("void")
+				|| Proscanner.tokens.get(j).getValue().equals("binary")
+				|| Proscanner.tokens.get(j).getValue().equals("decimal")) {
+			settype(Proscanner.tokens.get(j).getValue());
 			
-			Proscanner.tokens.remove(0);
+			
+			j++;
 			
 			return true;
 		} else {
@@ -352,27 +654,36 @@ public class Parser {
 
 	public boolean parameterlist() {
 		
-		if (Proscanner.tokens.get(i).getValue().equals("void")) {
-			Proscanner.tokens.remove(0);
+		if (Proscanner.tokens.get(j).getValue().equals("void")) {
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			j++;
 			if (!parameterlistprime()) {
 				return false;
 			}
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("int")
-				|| Proscanner.tokens.get(i).getValue().equals("binary")
-				|| Proscanner.tokens.get(i).getValue().equals("decimal")) {
-			Proscanner.tokens.remove(0);
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.Identifiers) {
+		} else if (Proscanner.tokens.get(j).getValue().equals("int")
+				|| Proscanner.tokens.get(j).getValue().equals("binary")
+				|| Proscanner.tokens.get(j).getValue().equals("decimal")) {
+			
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			j++;
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
+			
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			
+			checkflag = false;
+			mystorage(Proscanner.tokens.get(j).getValue()); 
+						
+			j++;
 			
 			if (!nonemptylistprime()) {
 				return false;
 			}
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals(")")) {
+		} else if (Proscanner.tokens.get(j).getValue().equals(")")) {
 			
 			
 			
@@ -385,11 +696,17 @@ public class Parser {
 
 	public boolean parameterlistprime() {
 		
-		if ((Proscanner.tokens.get(i).getKey()) == TokenNames.Identifiers) {
-			Proscanner.tokens.remove(0);
+		if ((Proscanner.tokens.get(j).getKey()) == TokenNames.Identifiers) {
+			intracode.add(" " + Proscanner.tokens.get(j).getValue());
+			
+			
+				checkflag = false;
+				mystorage(Proscanner.tokens.get(j).getValue());
+						
+			j++;
 
 			return nonemptylistprime();
-		} else if (Proscanner.tokens.get(i).getValue().equals(")")) {
+		} else if (Proscanner.tokens.get(j).getValue().equals(")")) {
 			
 			return true;
 		} else {
@@ -401,12 +718,12 @@ public class Parser {
 		
 		if (typename()) {
 
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.Identifiers) {
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
 				
 				return false;
 
 			} 
-			Proscanner.tokens.remove(0);
+			j++;
 
 			if (!nonemptylistprime()) {
 				return false;
@@ -420,22 +737,33 @@ public class Parser {
 
 	public boolean nonemptylistprime() {
 		
-		if (Proscanner.tokens.get(i).getValue().equals(";")) {
-			Proscanner.tokens.remove(0);
+		if (Proscanner.tokens.get(j).getValue().equals(",")) {
+			
+			intracode.add(Proscanner.tokens.get(j).getValue());
+			
+			j++;
 			if (!typename()) {
 				return false;
 			}
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.Identifiers) {
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
 				
 				return false;
 
 			} 
-			Proscanner.tokens.remove(0);
+			intracode.add(" " + gettype() );
+			intracode.add(" " + Proscanner.tokens.get(j).getValue() );
+			
+			
+			checkflag = false;
+			mystorage(Proscanner.tokens.get(j).getValue());
+			
+			
+			j++;
 			if (!nonemptylistprime()) {
 				return false;
 			}
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals(")")) {
+		} else if (Proscanner.tokens.get(j).getValue().equals(")")) {
 			
 			return true;
 		} else {
@@ -444,13 +772,31 @@ public class Parser {
 
 	}
 
-	public boolean idlist() {
+	
+
+	public boolean idlistprime(boolean globalcheck) {
 		
-		if (id()) {
-			
-			if (!idlistprime()) {
+		if (Proscanner.tokens.get(j).getValue().equals(",")) {
+			j++;
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
 				return false;
 			}
+			
+			
+			String id = Proscanner.tokens.get(j).getValue() ;
+			
+			
+			j++;
+			
+			if (!idprime(id, globalcheck)) {
+				return false;
+			}
+			
+			return idlistprime(globalcheck);
+			
+			
+			
+		} else if (Proscanner.tokens.get(j).getValue().equals(";")) {
 			
 			return true;
 		} else {
@@ -458,76 +804,48 @@ public class Parser {
 		}
 	}
 
-	public boolean idlistprime() {
+	
+
+	public boolean idprime(String id, boolean globalcheck) {
 		
-		if (Proscanner.tokens.get(i).getValue().equals(",")) {
-			Proscanner.tokens.remove(0);
+		if (Proscanner.tokens.get(j).getValue().equals("[")) {
+			j++;
 			
 			
-			if (!id()) {
-				return false;
-			}
-			if (!idlistprime()) {
-				return false;
-			}
-			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals(";")) {
-			
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public boolean id() {
-		
-		if ((Proscanner.tokens.get(i).getKey()) == TokenNames.Identifiers) {
-			
-			
-			Proscanner.tokens.remove(0);
-			varcount++;
-			return idprime();
-		} else {
-			return false;
-		}
-	}
-
-	public boolean idprime() {
-		
-		if (Proscanner.tokens.get(i).getValue().equals("[")) {
-			Proscanner.tokens.remove(0);
-
-			if (!expression()) {
-				return false;
-			}
-
-			if (!Proscanner.tokens.get(i).getValue().equals("]")) {
-				return false;
-			}
-
-			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals(",") || Proscanner.tokens.get(i).getValue().equals(";")
-				|| Proscanner.tokens.get(i).getValue().equals("=")) {
-			
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public boolean blockstatements() {
-		
-		if (Proscanner.tokens.get(i).getValue().equals("{")) {
-			Proscanner.tokens.remove(0);
-			
-			if (!statements()) {
+			if (!factor()) {
 				return false;
 			}
 			
-			if (!Proscanner.tokens.get(i).getValue().equals("}")) {
+			if (!termprime()) {
+				return false;
+			}
+			
+			if (!expressionprime()) {
+				return false;
+			}
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("]")) {
+				return false;
+			}
+			j++;
+			
+			
 				
-				return false;
-			} Proscanner.tokens.remove(0);
+				int arraySize = Integer.parseInt(fetchRef());
+				
+				for (int i = 0; i < arraySize; i++) {
+					checkflag = globalcheck;
+					mystorage(id + "[" + Integer.toString(i) + "]");
+					
+				
+			}
+
+			return true;
+		} else if (Proscanner.tokens.get(j).getValue().equals(",") || Proscanner.tokens.get(j).getValue().equals(";")
+				|| Proscanner.tokens.get(j).getValue().equals("=")) {
+			checkflag = globalcheck;
+			
+			mystorage(id);
 			
 			return true;
 		} else {
@@ -535,270 +853,475 @@ public class Parser {
 		}
 	}
 
+	
 	public boolean statements() {
 		
-	
-		  if (Proscanner.tokens.get(i).getValue().equals("}")) {
+		
+		if ((Proscanner.tokens.get(j).getKey()) == TokenNames.Identifiers) {
 			
-			return true;
-		} else if (stmnt()) {
+			String id = Proscanner.tokens.get(j).getValue() ;
+			
+			j++;
+			
+			
+			if (!statemntprime(id)) {
+				return false;
+			}
+			
+			
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("if")) {
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("(")) {
+				return false;
+			}
+			j++;
+			
+			
+			
+			
+			
+			if (!conditionexpres()) {
+				return false;
+			}
+			
+			
+			
+			String condition_expression = fetchRef();
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
+				return false;
+			}
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("{")) {
+				return false;
+			}
+			j++;
+			
+			
+			 String ifLabel = "c" + Integer.toString(++labelnum);
+			String nextLabel = "c" +  Integer.toString(++labelnum); 
+			
+			// Add code for the if statement.
+			ir_code.append( "if ( "  + condition_expression  + " ) goto " +  ifLabel + ";"
+					+ "goto " +  nextLabel + ";" +  ifLabel + ": ;");
+			
+			
 			
 			if (!statements()) {
 				return false;
 			}
-			return true;
-		}
-		  else {
-			return false;
-		}
-
-	}
-
-	public boolean stmnt() {        //counts statements when each production of statement ends
+			
+			ir_code.append(" " + nextLabel + ": ;");
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("}")) {
+				return false;
+			}			
+			
+			
+			j++;
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("while")) {
+			
+			String entryloop = "c" + Integer.toString(++labelnum);
+			String ifLabel = " c" + Integer.toString(++labelnum);
+			String nextLabel = " c" + Integer.toString(++labelnum);
+			
+			
+			labeling(entryloop, nextLabel);
+			
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("(")) {
+				return false;
+			}
+			j++;
+			
+			
+			ir_code.append( entryloop + ": ;");
+			
+			
+			if (!conditionexpres()) {
+				return false;
+			}
+			
+			
+			String condition_expression = fetchRef();
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
+				return false;
+			}
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("{")) {
+				return false;
+			}
+			j++;
+			
+			
+			ir_code.append(  "if ( " + condition_expression + " ) goto " + ifLabel + ";" + "goto " + nextLabel + ";" + ifLabel + ": ;" );
 		
-		if ((Proscanner.tokens.get(i).getKey()) == TokenNames.Identifiers) {
-			
-			Proscanner.tokens.remove(0);
 			
 			
-			if (!statemntprime()) {
+			if (!statements()) {
 				return false;
 			}
 			
-			return true;
-		}
-
-		else if (ifstmnt()) {
-			return true;
-		} else if (whilest()) {
-			return true;
-		} else if (returnst()) {
-			return true;
-		} else if (continuest()) {
-			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("read")) {
-			Proscanner.tokens.remove(0);
 			
-			if (!Proscanner.tokens.get(i).getValue().equals("(")) {
-				
+			ir_code.append( "goto " + entryloop + ";" + nextLabel + ": ;");
+			
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("}")) {
 				return false;
 			}
 			
-			Proscanner.tokens.remove(0);
 			
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.Identifiers) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
+			entryloops.remove(entryloops.size() - 1);
+			exitloop.remove(exitloop.size() - 1);
 			
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
-			return true;
-
-		}
-
-		else if (Proscanner.tokens.get(i).getValue().equals("write")) {
-			Proscanner.tokens.remove(0);
 			
-			if (!Proscanner.tokens.get(i).getValue().equals("(")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
+			j++;
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("return")) {
+			j++;
 			
+			
+			if (!returnprime()) {
+				return false;
+			}
+			
+			
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("break")) {
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
+				return false;
+			}
+			
+			
+			if (entryloops.size() > 0 && exitloop.size() > 0) {
+				String loopEnd = exitloop.get(exitloop.size() - 1);
+				ir_code.append( "goto " + loopEnd + ";");
+			} else {
+				System.out.println("error in break");
+				
+			}
+			
+			j++;
+			
+			
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("continue")) {
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
+				return false;
+			}
+			
+			
+			if (entryloops.size() > 0 && exitloop.size() > 0) {
+				String entryloop = entryloops.get(entryloops.size() - 1);
+				ir_code.append( "goto " + entryloop + ";");
+			} else {
+				System.out.println("error in continue ");
+				System.exit(1);
+			}
+			
+			j++;
+			
+			
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("read")) {
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("(")) {
+				return false;
+			}
+			j++;
+			
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Identifiers) {
+				return false;
+			}
+			
+			
+			String id = Proscanner.tokens.get(j).getValue();
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
+				return false;
+			}
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
+				return false;
+			}
+			
+			
+			int pos = locatePos(id, false);
+			
+			
+			ir_code.append(" " + "read ( " + arrayreference(pos) + " );");
+			
+			j++;
+			
+			
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("write")) {
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("(")) {
+				return false;
+			}
+			j++;
 			
 			
 			if (!expression()) {
-
 				return false;
 			}
 			
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
-				
-				return false;
-			}  
-			Proscanner.tokens.remove(0);
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
-			return true;
-
-		}
-
-		else if (Proscanner.tokens.get(i).getValue().equals("print")) {
-			Proscanner.tokens.remove(0);
-			if (!Proscanner.tokens.get(i).getValue().equals("(")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.String) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
 			
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
+			String writest = fetchRef();
 			
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-				
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
 				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
+			}
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
+				return false;
+			}
+			
+			
+			ir_code.append(" " + "write ( " + writest + " );");
+			
+			j++;
+			
+			
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("print")) {
+			j++;
+			if (!Proscanner.tokens.get(j).getValue().equals("(")) {
+				return false;
+			}
+			j++;
+			
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.String) {
+				return false;
+			}
+			
+			
+			String printst = Proscanner.tokens.get(j).getValue() ;
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
+				return false;
+			}
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
+				return false;
+			}
+			
+		ir_code.append(" " + "print ( " + printst + " );");
+			
+			j++;
+			
+			
+			return statements();
+		} else if (Proscanner.tokens.get(j).getValue().equals("}")) {
+			
 			return true;
-
 		} else {
-			return true;
-		}
-
-	}
-
-	public boolean statemntprime() {
-		
-		if (assignment()) {
-			return true;
-		} else if (funccall()) {
-			return true;
-		} else {
 			return false;
 		}
+
 	}
 
-	public boolean assignment() {
-		
-		if (Proscanner.tokens.get(i).getValue().equals("[")) {
-			Proscanner.tokens.remove(0);
-			if (!expression()) {
-				return false;
-			}
-			if (!Proscanner.tokens.get(i).getValue().equals("]")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			if (!Proscanner.tokens.get(i).getValue().equals("=")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			if (!expression()) {
-				return false;
-			}
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
-			return true;
-		
-		} else if (Proscanner.tokens.get(i).getValue().equals("=")) {
-			Proscanner.tokens.remove(0);
-			
-			if (!expression()) {
-				return false;
-			}
-			
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
-			return true;
-		}
-
-		else {
-			return false;
-		}
-	}
-
-	public boolean funccall() {
 	
-		if (Proscanner.tokens.get(i).getValue().equals("(")) {
-			Proscanner.tokens.remove(0);
+
+	public boolean statemntprime(String id) {
+		
+		if (Proscanner.tokens.get(j).getValue().equals("=")) {
+			j++;
+			
+			// Generated code for expression.
+			if (!factor()) {
+				return false;
+			}
+			
+			if (!termprime()) {
+				return false;
+			}
+			
+			if (!expressionprime()) {
+				return false;
+			}
+			
+			
+			String rightchild = fetchRef();
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
+				return false;
+			}
+			
+			int pos = locatePos(id, false);
+			globalcheck= false;
+			
+			ir_code.append(" " + arrayreference(pos) + " = " + rightchild + ";");		
+			
+			j++;			
+			return true;
+		} else if (Proscanner.tokens.get(j).getValue().equals("[")) {
+			j++;
+			
+			
+			if (!factor()) {
+				return false;
+			}
+			if (!termprime()) {
+				return false;
+			}
+			if (!expressionprime()) {
+				return false;
+			}
+			
+			
+			String arrayOffset = fetchRef();
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("]")) {
+				return false;
+			}
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals("=")) {
+				return false;
+			}
+			j++;
+			
+			
+			
+			if (!factor()) {
+				return false;
+			}
+			if (!termprime()) {
+				return false;
+			}
+			if (!expressionprime()) {
+				return false;
+			}
+			
+			String  rightchild = fetchRef();
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
+				return false;
+			}
+			
+			
+			checkflag = false;
+			int indi = locatePos(id, true);
+			ir_code.append( mystorage(Integer.toString(indi) + " + " + arrayOffset));
+			
+			
+			String toPrint;
+			
+			if (globalcheck()) {
+				toPrint = "global";
+			} else {
+				toPrint = "local";
+			}
+			
+			toPrint += "[" + "local[" + Integer.toString(localstorage.size() - 1) + "]"  + "]";			
+			
+			
+			code_gen(" " + toPrint + " = " + rightchild + ";");
+			
+			j++;		
+			return true;
+		} else if (Proscanner.tokens.get(j).getValue().equals("(")) {
+			j++;
+			
+			
+			localvarisfac = true;
+			
 			
 			if (!exprlist()) {
 				return false;
 			}
 			
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
 			
+			String parameters = fetchRef();
+			
+			
+			localvarisfac = false;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
+				return false;
+			}
+			j++;
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
+				return false;
+			}
+			
+			
+			ir_code.append(  id + " ( " + parameters + " );");
+			
+			j++;			
 			return true;
-		
 		} else {
 			return false;
 		}
 	}
+
+	
 
 	public boolean exprlist() {
 		
-		if (nonemptyexprlist()) {
-			return true;
-		
-		} else if (Proscanner.tokens.get(i).getValue().equals(")")) {
-			
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public boolean nonemptyexprlist() {
-		
-		if (expression()) {
+		if (factor()) {
+			if (!termprime()) {
+				return false;
+			}
+			if (!expressionprime()) {
+				return false;
+			}
 			if (!nonemptyexprlistprime()) {
 				return false;
 			}
 			return true;
+		} else if (Proscanner.tokens.get(j).getValue().equals(")")) {
+			
+			setAccess("");
+			return true;
 		} else {
 			return false;
 		}
 	}
 
+	
+
 	public boolean nonemptyexprlistprime() {
 		
-		if (Proscanner.tokens.get(i).getValue().equals(",")) {
-			Proscanner.tokens.remove(0);
-
+		if (Proscanner.tokens.get(j).getValue().equals(",")) {
+			j++;
+			
+			
+			String ongoing = fetchRef();
+						
 			if (!expression()) {
 
 				return false;
 			}
-
+			
+			
+			setAccess(ongoing + ", " + fetchRef());
 			if (!nonemptyexprlistprime()) {
 				return false;
 			}
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals(")")) {
+		} else if (Proscanner.tokens.get(j).getValue().equals(")")) {
 			
 
 			return true;
@@ -808,40 +1331,7 @@ public class Parser {
 
 	}
 
-	public boolean ifstmnt() {
-		
-		if (Proscanner.tokens.get(i).getValue().equals("if")) {
-			Proscanner.tokens.remove(0);
-
-			if (!Proscanner.tokens.get(i).getValue().equals("(")) {
-
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-
-			if (!conditionexpres()) {
-				return false;
-			}
-			
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
-				
-
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			
-			if (!blockstatements()) {
-				return false;
-			}
-			statecount++;
-			return true;
-		} else {
-			return false;
-		}
-
-	}
-
+	
 	public boolean conditionexpres() {
 		
 		if (condition()) {
@@ -853,12 +1343,28 @@ public class Parser {
 
 	public boolean conditionexpresprime() {
 		
-		if (conditionop()) {
-			if (!condition()) {
-				return false;
+		if (Proscanner.tokens.get(j).getValue().equals("&&") || Proscanner.tokens.get(j).getValue().equals("||")) {
+			
+			String doublesign = Proscanner.tokens.get(j).getValue();
+			
+			j++;
+			
+			
+			String leftchild = fetchRef();
+			
+			
+			
+			if (condition()) {
+				
+				String rightchild = fetchRef();
+				checkflag = false;
+				
+				ir_code.append(mystorage("( " + leftchild + " " + doublesign + " " + rightchild + " )"));
+				setAccess("local[" + Integer.toString(localstorage.size() - 1) + "]");
+				return true;
 			}
-			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals(")")) {
+			return false;
+		} else if (Proscanner.tokens.get(j).getValue().equals(")")) {
 			
 			return true;
 		} else {
@@ -866,159 +1372,122 @@ public class Parser {
 		}
 	}
 
-	public boolean conditionop() {
-		
-		if (Proscanner.tokens.get(i).getValue().equals("&&")) {
-			Proscanner.tokens.remove(0);
-			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("||")) {
-			Proscanner.tokens.remove(0);
-			return true;
-		} else {
-			return false;
-		}
-	}
+
 
 	public boolean condition() {
 		
 		if (expression()) {
-			if (!comparisonop()) {
-				return false;
-			}
-			if (!expression()) {
-				return false;
-			}
-			return true;
+			return condition_prime();
 		
 		} else {
 			return false;
 		}
 	}
-
-	public boolean comparisonop() {
+	
+	public boolean condition_prime() {
 		
-		if (Proscanner.tokens.get(i).getValue().equals("==") 
-				|| Proscanner.tokens.get(i).getValue().equals("!=")
-				|| Proscanner.tokens.get(i).getValue().equals(">") 
-				|| Proscanner.tokens.get(i).getValue().equals(">=")
-				|| Proscanner.tokens.get(i).getValue().equals("<")
-				|| Proscanner.tokens.get(i).getValue().equals("<=")) {
-
-			Proscanner.tokens.remove(0);
+		if (Proscanner.tokens.get(j).getValue().equals("==") || Proscanner.tokens.get(j).getValue().equals("!=")
+				|| Proscanner.tokens.get(j).getValue().equals(">") || Proscanner.tokens.get(j).getValue().equals(">=")
+				|| Proscanner.tokens.get(j).getValue().equals("<") || Proscanner.tokens.get(j).getValue().equals("<=")) {
 			
-			return true;
-		
-		} else {
-			return false;
-		}
-
-	}
-
-	public boolean whilest() { 
-		
-		
-		if (Proscanner.tokens.get(i).getValue().equals("while")) {
-			Proscanner.tokens.remove(0);
 			
-			if (!Proscanner.tokens.get(i).getValue().equals("(")) {
-
+			String operator = Proscanner.tokens.get(j).getValue();
+			
+			j++;
+			
+			
+			String leftchild =fetchRef();
+			
+			
+			if (!factor()) {
+				return false;
+			}
+			
+			if (!termprime()) {
+				return false;
+			}
+			
+			if (!expressionprime()) {
+				return false;
+			}
+			 
 				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			
-			if (!conditionexpres()) {
-				return false;
-			}
-			
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
-
+				String rightchild = fetchRef();
+				checkflag = false;
+				ir_code.append(mystorage("( " + leftchild + " " + operator + " " + rightchild + " )"));
 				
-				return false;
-			} 
+				setAccess("local[" + Integer.toString(localstorage.size() - 1) + "]");
+				
+				return true;
 			
-			Proscanner.tokens.remove(0);
-			
-			
-			if (!blockstatements()) {
-				return false;
-			}
-			statecount++;
-			return true;
+							
 		} else {
 			return false;
 		}
-
 	}
-
-	public boolean returnst() {
+	
+	 public boolean comparisonop() {
+		 
+		if (Proscanner.tokens.get(j).getValue().equals("==") 
+				|| Proscanner.tokens.get(j).getValue().equals("!=")
+				|| Proscanner.tokens.get(j).getValue().equals(">") 
+				|| Proscanner.tokens.get(j).getValue().equals(">=")
+				|| Proscanner.tokens.get(j).getValue().equals("<")
+				|| Proscanner.tokens.get(j).getValue().equals("<=")) {
+			String op = Proscanner.tokens.get(j).getValue();
+			j++;
+			String lhsnextexpression = fetchRef();
+			return true;
 		
-		if (Proscanner.tokens.get(i).getValue().equals("return")) {
-			Proscanner.tokens.remove(0);
-			if (!returnprime()) {
-				return false;
-			}
-			return true;
 		} else {
 			return false;
 		}
 
-	}
+	}  
+
+	
 
 	public boolean returnprime() {				//counting statements at end of semicolon
 		
-		if (expression()) {
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
-			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals(";")) {
-
-			Proscanner.tokens.remove(0);
-			statecount++;
-			return true;
-		} else {
-			return false;
-		}
-	}
-
-	public boolean breakstmnt() {
+		if (factor()) {
+			
 		
-		if (Proscanner.tokens.get(i).getValue().equals("break")) {
-			Proscanner.tokens.remove(0);
-
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
-				
-				return false;
-			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
-			return true;
-		} else {
+		if (!termprime()) {
 			return false;
 		}
-	}
-
-	public boolean continuest() {
 		
-		if (Proscanner.tokens.get(i).getValue().equals("continue")) {
-			Proscanner.tokens.remove(0);
+		if (!expressionprime()) {
+			return false;
+		}
+		 
+			if (!Proscanner.tokens.get(j).getValue().equals(";")) {
 
-			if (!Proscanner.tokens.get(i).getValue().equals(";")) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
-			statecount++;
+			
+			
+					checkflag = false;
+						
+					ir_code.append(mystorage(fetchRef()) + " " + "return " + "local[" + Integer.toString(localstorage.size() - 1) + "]" + ";");			
+					 
+						
+			j++;
+			
+			return true;
+		} else if (Proscanner.tokens.get(j).getValue().equals(";")) {
+			
+			
+				ir_code.append(" " + "return;");
+			j++;
+			
 			return true;
 		} else {
 			return false;
 		}
 	}
+
+	
 
 	public boolean expression() {
 		
@@ -1031,28 +1500,44 @@ public class Parser {
 
 	public boolean expressionprime() {
 		
-		if (addop()) {
+		if (Proscanner.tokens.get(j).getValue().equals("+") || Proscanner.tokens.get(j).getValue().equals("-")) {
 			
+			
+			String op = Proscanner.tokens.get(j).getValue();
+			j++;
+			
+			
+				String leftchild = fetchRef();
+						
+						
 			if (!term()) {
 				return false;
 			}
 			
+			
+			String rightchild = fetchRef();
+			checkflag = false;
+						
+						ir_code.append(mystorage(leftchild + " " + op + " " + rightchild));
+					setAccess("local[" + Integer.toString(localstorage.size() - 1) + "]");
+					
 			if (!expressionprime()) {
 				return false;
 			}
 			
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("]") 
-				|| Proscanner.tokens.get(i).getValue().equals(",") 
-				|| Proscanner.tokens.get(i).getValue().equals(")") 
-				|| Proscanner.tokens.get(i).getValue().equals(";") 
-				|| Proscanner.tokens.get(i).getValue().equals("==") 
-				|| Proscanner.tokens.get(i).getValue().equals("!=")
-				|| Proscanner.tokens.get(i).getValue().equals(">") 
-				|| Proscanner.tokens.get(i).getValue().equals(">=")
-				|| Proscanner.tokens.get(i).getValue().equals("<")
-				|| Proscanner.tokens.get(i).getValue().equals("&&")
-				|| Proscanner.tokens.get(i).getValue().equals("||")) {
+		} else if (Proscanner.tokens.get(j).getValue().equals("]") 
+				|| Proscanner.tokens.get(j).getValue().equals(",") 
+				|| Proscanner.tokens.get(j).getValue().equals(")") 
+				|| Proscanner.tokens.get(j).getValue().equals(";") 
+				|| Proscanner.tokens.get(j).getValue().equals("==") 
+				|| Proscanner.tokens.get(j).getValue().equals("!=")
+				|| Proscanner.tokens.get(j).getValue().equals(">") 
+				|| Proscanner.tokens.get(j).getValue().equals(">=")
+				|| Proscanner.tokens.get(j).getValue().equals("<")
+				|| Proscanner.tokens.get(j).getValue().equals("<=")
+				|| Proscanner.tokens.get(j).getValue().equals("&&")
+				|| Proscanner.tokens.get(j).getValue().equals("||")) {
 			
 			
 			return true;
@@ -1062,18 +1547,7 @@ public class Parser {
 
 	}
 
-	public boolean addop() {
-		
-		if (Proscanner.tokens.get(i).getValue().equals("+") 
-				|| Proscanner.tokens.get(i).getValue().equals("-") ) {
-			Proscanner.tokens.remove(0);
-			
-			return true;
-		} else {
-			return false;
-		}
-
-	}
+	
 
 	public boolean term() {
 		
@@ -1087,28 +1561,45 @@ public class Parser {
 
 	public boolean termprime() {
 		
-		if (mulop()) {
+		if (Proscanner.tokens.get(j).getValue().equals("*") || Proscanner.tokens.get(j).getValue().equals("/")) {
+			
+			String op = Proscanner.tokens.get(j).getValue();
+			
+			j++;
+			
+			
+			 String leftchild =fetchRef();
+			
 			if (!factor()) {
 				return false;
 			}
+			
+			String rightchild = fetchRef();
+			
+			checkflag = false;
+			
+			ir_code.append(mystorage(leftchild + " " + op + " " + rightchild));
+			
+		setAccess("local[" + Integer.toString(localstorage.size() - 1) + "]");
+	
 			if (!termprime()) {
 				return false;
 			}
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("+") 
-				|| Proscanner.tokens.get(i).getValue().equals("-") 
-				|| Proscanner.tokens.get(i).getValue().equals("]") 
-				|| Proscanner.tokens.get(i).getValue().equals(",") 
-				|| Proscanner.tokens.get(i).getValue().equals(")") 
-				|| Proscanner.tokens.get(i).getValue().equals(";") 
-				|| Proscanner.tokens.get(i).getValue().equals("==") 
-				|| Proscanner.tokens.get(i).getValue().equals("!=")
-				|| Proscanner.tokens.get(i).getValue().equals(">") 
-				|| Proscanner.tokens.get(i).getValue().equals(">=")
-				|| Proscanner.tokens.get(i).getValue().equals("<")
-				|| Proscanner.tokens.get(i).getValue().equals("<=")
-				|| Proscanner.tokens.get(i).getValue().equals("&&")
-				|| Proscanner.tokens.get(i).getValue().equals("||")) {
+		} else if (Proscanner.tokens.get(j).getValue().equals("+") 
+				|| Proscanner.tokens.get(j).getValue().equals("-") 
+				|| Proscanner.tokens.get(j).getValue().equals("]") 
+				|| Proscanner.tokens.get(j).getValue().equals(",") 
+				|| Proscanner.tokens.get(j).getValue().equals(")") 
+				|| Proscanner.tokens.get(j).getValue().equals(";") 
+				|| Proscanner.tokens.get(j).getValue().equals("==") 
+				|| Proscanner.tokens.get(j).getValue().equals("!=")
+				|| Proscanner.tokens.get(j).getValue().equals(">") 
+				|| Proscanner.tokens.get(j).getValue().equals(">=")
+				|| Proscanner.tokens.get(j).getValue().equals("<")
+				|| Proscanner.tokens.get(j).getValue().equals("<=")
+				|| Proscanner.tokens.get(j).getValue().equals("&&")
+				|| Proscanner.tokens.get(j).getValue().equals("||")) {
 			
 			return true;
 		} else {
@@ -1117,51 +1608,76 @@ public class Parser {
 
 	}
 
-	public boolean mulop() {
-		
-		if (Proscanner.tokens.get(i).getValue().equals("*")) {
-			Proscanner.tokens.remove(0);
-			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("/")) {
-			Proscanner.tokens.remove(0);
-			return true;
-		} else {
-			return false;
-		}
-	}
-
+	
 	public boolean factor() {
 		
-		if ((Proscanner.tokens.get(i).getKey()) == TokenNames.Identifiers) {
-			Proscanner.tokens.remove(0);
+		if ((Proscanner.tokens.get(j).getKey()) == TokenNames.Identifiers) {
 			
-			return factorprime();
 			
-		} else if ((Proscanner.tokens.get(i).getKey()) == TokenNames.Numbers) {
-			Proscanner.tokens.remove(0);
+				String id = Proscanner.tokens.get(j).getValue();
+			j++;
+			
+			return factorprime(id);
+			
+		} else if ((Proscanner.tokens.get(j).getKey()) == TokenNames.Numbers) {
+			
+			
+					if (localvarisfac) {
+						checkflag = false;
+							
+							
+							ir_code.append(mystorage(Proscanner.tokens.get(j).getValue()));
+							setAccess("local[" + Integer.toString(localstorage.size() - 1) + "]");
+							
+					} else {
+							
+						
+							setAccess(Proscanner.tokens.get(j).getValue());
+							
+					}
+			j++;
 			
 			return true;
 
-		} else if (Proscanner.tokens.get(i).getValue().equals("-")) {
-			Proscanner.tokens.remove(0);
+		} else if (Proscanner.tokens.get(j).getValue().equals("-")) {
+			j++;
 
-			if ((Proscanner.tokens.get(i).getKey()) != TokenNames.Numbers) {
+			if ((Proscanner.tokens.get(j).getKey()) != TokenNames.Numbers) {
 				return false;
 			}
-			Proscanner.tokens.remove(0);
+			
+			
+						if (localvarisfac) {
+							checkflag = false;
+							
+						ir_code.append(mystorage("-" + Proscanner.tokens.get(j).getValue() ));
+							setAccess("local[" + Integer.toString(localstorage.size() - 1) + "]");
+						} else {
+							
+						setAccess("-" + Proscanner.tokens.get(j).getValue());
+						}
+						
+			j++;
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("(")) {
-			Proscanner.tokens.remove(0);
+		} else if (Proscanner.tokens.get(j).getValue().equals("(")) {
+			j++;
 
-			if (!expression()) {
+			if (!factor()) {
 				return false;
 			}
-
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
+			
+			if (!termprime()) {
+				return false;
+			}
+			
+			if (!expressionprime()) {
+				return false;
+			}
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
+			j++;
 
 			return true;
 		} else {
@@ -1169,48 +1685,91 @@ public class Parser {
 		}
 	}
 
-	public boolean factorprime() {
+	public boolean factorprime(String id) {
 		
-		if (Proscanner.tokens.get(i).getValue().equals("[")) {
-			Proscanner.tokens.remove(0);
-			if (!expression()) {
+		if (Proscanner.tokens.get(j).getValue().equals("[")) {
+			j++;
+			if (!factor()) {
 				return false;
 			}
-			if (!Proscanner.tokens.get(i).getValue().equals("]")) {
+			
+			if (!termprime()) {
+				return false;
+			}
+			
+			if (!expressionprime()) {
+				return false;
+			}
+			
+					String actualexpression = fetchRef();
+			if (!Proscanner.tokens.get(j).getValue().equals("]")) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
+			j++;
+			
+			
+						checkflag = false;
+						
+						int posi = locatePos(id, true);
+						ir_code.append(mystorage(Integer.toString(posi) + " + " + actualexpression));
+						
+						
+						String arraycase;
+						if (globalcheck()) {
+							arraycase = "global";
+						} else {
+							arraycase = "local";
+						}
+						
+						arraycase += "[" + "local[" + Integer.toString(localstorage.size() - 1) + "]" + "]";
+						checkflag = false;
+						
+						ir_code.append(mystorage(arraycase));
+				setAccess("local[" + Integer.toString(localstorage.size() - 1) + "]");
+						
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("(")) {
-			Proscanner.tokens.remove(0);
+		} else if (Proscanner.tokens.get(j).getValue().equals("(")) {
+			j++;
 			if (!exprlist()) {
 				return false;
 			}
-			if (!Proscanner.tokens.get(i).getValue().equals(")")) {
+			
+			
+			if (!Proscanner.tokens.get(j).getValue().equals(")")) {
 				
 				return false;
 			} 
-			Proscanner.tokens.remove(0);
+			j++;
+			checkflag = false;
+			
+			
+			ir_code.append(mystorage(id + " ( " + fetchRef()  + " ) "));
+			setAccess("local[" + Integer.toString(localstorage.size() - 1) + "]");
 			
 			return true;
-		} else if (Proscanner.tokens.get(i).getValue().equals("+") 
-				|| Proscanner.tokens.get(i).getValue().equals("*") 
-				|| Proscanner.tokens.get(i).getValue().equals("/") 
-				|| Proscanner.tokens.get(i).getValue().equals("-") 
-				|| Proscanner.tokens.get(i).getValue().equals("]") 
-				|| Proscanner.tokens.get(i).getValue().equals(",") 
-				|| Proscanner.tokens.get(i).getValue().equals(")") 
-				|| Proscanner.tokens.get(i).getValue().equals(";") 
-				|| Proscanner.tokens.get(i).getValue().equals("==") 
-				|| Proscanner.tokens.get(i).getValue().equals("!=")
-				|| Proscanner.tokens.get(i).getValue().equals(">") 
-				|| Proscanner.tokens.get(i).getValue().equals(">=")
-				|| Proscanner.tokens.get(i).getValue().equals("<")
-				|| Proscanner.tokens.get(i).getValue().equals("<=")
-				|| Proscanner.tokens.get(i).getValue().equals("&&")
-				|| Proscanner.tokens.get(i).getValue().equals("||")) {
+		} else if (Proscanner.tokens.get(j).getValue().equals("+") 
+				|| Proscanner.tokens.get(j).getValue().equals("*") 
+				|| Proscanner.tokens.get(j).getValue().equals("/") 
+				|| Proscanner.tokens.get(j).getValue().equals("-") 
+				|| Proscanner.tokens.get(j).getValue().equals("]") 
+				|| Proscanner.tokens.get(j).getValue().equals(",") 
+				|| Proscanner.tokens.get(j).getValue().equals(")") 
+				|| Proscanner.tokens.get(j).getValue().equals(";") 
+				|| Proscanner.tokens.get(j).getValue().equals("==") 
+				|| Proscanner.tokens.get(j).getValue().equals("!=")
+				|| Proscanner.tokens.get(j).getValue().equals(">") 
+				|| Proscanner.tokens.get(j).getValue().equals(">=")
+				|| Proscanner.tokens.get(j).getValue().equals("<")
+				|| Proscanner.tokens.get(j).getValue().equals("<=")
+				|| Proscanner.tokens.get(j).getValue().equals("&&")
+				|| Proscanner.tokens.get(j).getValue().equals("||")) {
 			
+			
+			    int ind = locatePos(id, false);
+			
+				setAccess(arrayreference(ind));	
+				
 			return true;
 		} else {
 			return false;
